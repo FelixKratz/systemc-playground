@@ -3,3 +3,6 @@ all: *.hpp *.cpp | bin
 
 bin:
 	mkdir -p bin
+
+clean:
+	rm -rf bin
