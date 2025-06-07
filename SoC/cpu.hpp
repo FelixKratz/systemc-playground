@@ -43,7 +43,19 @@ SC_MODULE(CPU) {
     write_data.write(data);
     write_flag.write(true);
 
-    std::cout << "[ " << (int)destination << " ] : " << (int)data << std::endl;
+    std::cout << sc_time_stamp() << ": str " << (int)destination << ", " << (int)data << std::endl;
+  }
+
+  void print() {
+    uint64_t source_address = fetch<uint8_t>();
+    uint8_t data = read_from_memory(source_address);
+
+    std::cout << sc_time_stamp() << ": dsp " << source_address << " -> " << (int)data << std::endl;
+  }
+
+  void halt() {
+    halted = true;
+    std::cout << sc_time_stamp() << ": stp" << std::endl;
   }
 
   void execute() {
@@ -52,22 +64,17 @@ SC_MODULE(CPU) {
 
       uint8_t opcode = fetch<uint8_t>();
 
-      std::cout << pc << " opcode: " << (int)opcode << std::endl;
-
       switch (opcode) {
         case OP_STORE: {
           store();
-          std::cout << sc_time_stamp() << ": STORE" << std::endl;
           break;
         };
         case OP_PRINT: {
-          uint64_t source_address = fetch<uint8_t>();
-          std::cout << sc_time_stamp() << ": READ -> " << (int)read_from_memory(source_address) << std::endl;
+          print();
           break;
         };
         case OP_HALT: {
-          halted = true;
-          std::cout << sc_time_stamp() << ": HALT" << std::endl;
+          halt();
           break;
         };
         default: {
