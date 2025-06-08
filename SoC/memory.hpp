@@ -21,6 +21,5 @@ SC_MODULE(Memory) {
     SC_METHOD(operate);
     sensitive << clock.pos();
     dont_initialize();
-    memory_map[0] = 1;
   }
 };

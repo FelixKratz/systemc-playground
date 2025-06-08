@@ -1,4 +1,5 @@
 #include <systemc.h>
+#include "registers.hpp"
 
 enum OPCodes : uint8_t {
   OP_NULL,       // nll
