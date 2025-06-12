@@ -2,28 +2,45 @@
 #include "registers.hpp"
 
 enum OPCodes : uint8_t {
-  OP_NULL,       // nll
+  OP_NULL,       // nop
   OP_STORE,      // str
   OP_PRINT,      // dsp
   OP_HALT = 0xff // stp
 };
 
-SC_MODULE(CPU) {
-  sc_in<bool> clock;
+class CPU : public sc_module {
+  public:
+  sc_in<bool> clock, ack;
+  sc_in<uint8_t> read_data;
+
+  sc_out<bool> req;
   sc_out<bool> write_flag;
   sc_out<uint64_t> address;
   sc_out<uint8_t> write_data;
-  sc_in<uint8_t> read_data;
 
+  private:
   bool halted = false;
   uint64_t pc = 0;
 
+  uint8_t memory_transaction() {
+    // If ack or req is high, some other operation is ongoing.
+    while (ack || req) wait();
+    req = true;
+
+    // Wait for memory to handle the request
+    while(!ack) wait();
+    uint8_t data = read_data;
+    req = false;
+
+    // Wait for memory to reset ack to low
+    while(ack) wait();
+    return data;
+  }
+
   uint8_t read_from_memory(uint64_t source_address) {
-    address.write(source_address);
-    write_flag.write(false);
-    wait(SC_ZERO_TIME);
-    wait();
-    return read_data.read();
+    address = source_address;
+    write_flag = false;
+    return memory_transaction();
   }
 
 
@@ -40,9 +57,10 @@ SC_MODULE(CPU) {
     uint64_t destination = fetch<uint8_t>();
     uint8_t data = fetch<uint8_t>();
 
-    address.write(destination);
-    write_data.write(data);
-    write_flag.write(true);
+    address = destination;
+    write_data = data;
+    write_flag = true;
+    memory_transaction();
 
     std::cout << sc_time_stamp() << ": str " << (int)destination << ", " << (int)data << std::endl;
   }
@@ -86,8 +104,9 @@ SC_MODULE(CPU) {
     };
   }
 
-  SC_CTOR(CPU) {
+  public:
+  CPU(sc_module_name name) : sc_module(name) {
     SC_THREAD(execute);
-    sensitive << clock.neg();
+    sensitive << clock.pos();
   }
 };

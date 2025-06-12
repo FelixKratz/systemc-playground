@@ -1,25 +1,32 @@
 #include <systemc.h>
 #include <unordered_map>
 
-SC_MODULE(Memory) {
-  sc_in<bool> clock;
-  sc_in<bool> write_flag;
-  sc_in<uint64_t> address;
-  sc_in<uint8_t> write_data;
-  sc_out<uint8_t> read_data;
-
+class Memory : public sc_module {
+  public:
   std::unordered_map<uint64_t, uint8_t> memory_map;
+  struct Input {
+    sc_in<uint64_t> address;
+    sc_in<uint8_t> write_data;
+    sc_in<bool> req, clock, write_flag;
+  } in;
+
+  struct Output {
+    sc_out<bool> ack;
+    sc_out<uint8_t> read_data;
+  } out;
 
   void operate() {
-    if (write_flag.read()) {
-      memory_map[address.read()] = write_data.read();
+    if (!in.req) out.ack = false;
+    else {
+      if (in.write_flag) memory_map[in.address] = in.write_data;
+      out.read_data = memory_map[in.address];
+      out.ack = true;
     }
-    read_data.write(memory_map[address.read()]);
   }
 
-  SC_CTOR(Memory) {
+  Memory(sc_module_name name) : sc_module(name) {
     SC_METHOD(operate);
-    sensitive << clock.pos();
+    sensitive << in.clock.pos();
     dont_initialize();
   }
 };
