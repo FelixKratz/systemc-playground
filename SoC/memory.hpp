@@ -3,9 +3,9 @@
 
 class Memory : public sc_module {
   public:
-  std::unordered_map<uint64_t, uint8_t> memory_map;
+  std::unordered_map<uint8_t, uint8_t> memory_map;
   struct Input {
-    sc_in<uint64_t> address;
+    sc_in<uint8_t> address;
     sc_in<uint8_t> write_data;
     sc_in<bool> req, clock, write_flag;
   } in;

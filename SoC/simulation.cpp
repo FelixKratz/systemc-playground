@@ -6,19 +6,20 @@ int sc_main(int argc, char* argv[]) {
   sc_clock clock("clock", 1, SC_MS);
 
   sc_signal<bool> write_flag, ack, req;
-  sc_signal<uint64_t> address;
+  sc_signal<uint8_t> address;
   sc_signal<uint8_t> write_data, read_data;
 
   CPU cpu("CPU");
   Memory memory("Memory");
 
-  cpu.clock(clock);
-  cpu.address(address);
-  cpu.write_flag(write_flag);
-  cpu.read_data(read_data);
-  cpu.write_data(write_data);
-  cpu.ack(ack);
-  cpu.req(req);
+  cpu.in.clock(clock);
+  cpu.in.read_data(read_data);
+  cpu.in.ack(ack);
+
+  cpu.out.req(req);
+  cpu.out.address(address);
+  cpu.out.write_flag(write_flag);
+  cpu.out.write_data(write_data);
 
   memory.in.clock(clock);
   memory.in.write_flag(write_flag);
