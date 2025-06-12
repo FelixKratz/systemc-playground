@@ -3,8 +3,9 @@
 
 enum OPCodes : uint8_t {
   OP_NULL,       // nop
-  OP_STORE,      // str
-  OP_PRINT,      // dsp
+  OP_STORE,      // str <addr> <value>
+  OP_PRINT,      // dsp <addr>
+  OP_JMP,        // jmp <addr>
   OP_HALT = 0xff // stp
 };
 
@@ -24,7 +25,7 @@ class CPU : public sc_module {
 
   private:
   bool halted = false;
-  uint64_t pc = 0;
+  uint8_t pc = 0;
 
   uint8_t memory_transaction() {
     // If ack or req is high, some other operation is ongoing.
@@ -41,7 +42,7 @@ class CPU : public sc_module {
     return data;
   }
 
-  uint8_t read_from_memory(uint64_t source_address) {
+  uint8_t read_from_memory(uint8_t source_address) {
     out.address = source_address;
     out.write_flag = false;
     return memory_transaction();
@@ -58,7 +59,7 @@ class CPU : public sc_module {
   }
 
   void store() {
-    uint64_t destination = fetch<uint8_t>();
+    uint8_t destination = fetch<uint8_t>();
     uint8_t data = fetch<uint8_t>();
 
     out.address = destination;
@@ -70,10 +71,15 @@ class CPU : public sc_module {
   }
 
   void print() {
-    uint64_t source_address = fetch<uint8_t>();
+    uint8_t source_address = fetch<uint8_t>();
     uint8_t data = read_from_memory(source_address);
 
-    std::cout << sc_time_stamp() << ": dsp " << source_address << " -> " << (int)data << std::endl;
+    std::cout << sc_time_stamp() << ": dsp " << (int)source_address << " -> " << (int)data << std::endl;
+  }
+
+  void jmp() {
+    pc = fetch<uint8_t>();
+    std::cout << sc_time_stamp() << ": jmp " << (int)pc << std::endl;
   }
 
   void halt() {
@@ -99,6 +105,10 @@ class CPU : public sc_module {
         case OP_HALT: {
           halt();
           break;
+        };
+        case OP_JMP: {
+          jmp();
+          break; 
         };
         default: {
           std::cout << sc_time_stamp() << ": Unknown opcode " << (int)opcode << std::endl;
