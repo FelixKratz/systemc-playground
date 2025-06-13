@@ -2,11 +2,11 @@
 #include "registers.hpp"
 
 enum OPCodes : uint8_t {
-  OP_NULL,       // nop
-  OP_STORE,      // str <addr> <value>
-  OP_PRINT,      // dsp <addr>
-  OP_JMP,        // jmp <addr>
-  OP_HALT = 0xff // stp
+  OP_NOP,       // nop
+  OP_STR,       // str <addr> <value>
+  OP_DSP,       // dsp <addr>
+  OP_JMP,       // jmp <addr>
+  OP_STP = 0xff // stp
 };
 
 class CPU : public sc_module {
@@ -23,10 +23,25 @@ class CPU : public sc_module {
     sc_out<uint8_t> write_data;
   } out;
 
+  CPU(sc_module_name name) : sc_module(name) {
+    SC_THREAD(execute);
+    sensitive << in.clock.pos();
+  }
+
   private:
+  using Handler = void(CPU::*)();
+  const std::unordered_map<OPCodes, Handler> opcode_handlers = {
+    { OP_NOP, &CPU::nop },
+    { OP_STR, &CPU::str },
+    { OP_DSP, &CPU::dsp },
+    { OP_JMP, &CPU::jmp },
+    { OP_STP, &CPU::stp }
+  };
+
   bool halted = false;
   uint8_t pc = 0;
 
+  // A full handshake transaction with the memory
   uint8_t memory_transaction() {
     // If ack or req is high, some other operation is ongoing.
     while (in.ack || out.req) wait();
@@ -42,23 +57,31 @@ class CPU : public sc_module {
     return data;
   }
 
+  // Read one byte of memory and dont progress the pc
   uint8_t read_from_memory(uint8_t source_address) {
     out.address = source_address;
     out.write_flag = false;
     return memory_transaction();
   }
 
+  // Fetch a byte segment from memory and increment the pc
+  template <typename T>
+  T fetch() {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "Template type passed to fetch must be trivially copyable.");
 
-  template <typename t_out>
-  t_out fetch() {
-    t_out result = 0;
-    for (size_t i = 0; i < sizeof(t_out); i++) {
-      *((uint8_t*)&result + i) = read_from_memory(pc++);
+    // Little-endian byte loading
+    uint8_t buffer[sizeof(T)];
+    for (size_t i = 0; i < sizeof(T); i++) {
+      buffer[i] = read_from_memory(pc++);
     }
+    T result;
+    std::memcpy(&result, buffer, sizeof(T));
     return result;
   }
 
-  void store() {
+  // Store a byte in memory
+  void str() {
     uint8_t destination = fetch<uint8_t>();
     uint8_t data = fetch<uint8_t>();
 
@@ -70,57 +93,46 @@ class CPU : public sc_module {
     std::cout << sc_time_stamp() << ": str " << (int)destination << ", " << (int)data << std::endl;
   }
 
-  void print() {
+  // Print a byte stored in memory
+  void dsp() {
     uint8_t source_address = fetch<uint8_t>();
     uint8_t data = read_from_memory(source_address);
 
     std::cout << sc_time_stamp() << ": dsp " << (int)source_address << " -> " << (int)data << std::endl;
   }
 
+  // Perform a jump of the pc
   void jmp() {
     pc = fetch<uint8_t>();
     std::cout << sc_time_stamp() << ": jmp " << (int)pc << std::endl;
   }
 
-  void halt() {
+  // Halt the CPU
+  void stp() {
     halted = true;
     std::cout << sc_time_stamp() << ": stp" << std::endl;
   }
 
+  // Do nothing, just wait
+  void nop() {
+    std::cout << sc_time_stamp() << ": nop" << std::endl;
+  }
+
+  // Core loop of the CPU
   void execute() {
     while (!halted) {
       wait();
 
-      uint8_t opcode = fetch<uint8_t>();
-
-      switch (opcode) {
-        case OP_STORE: {
-          store();
-          break;
-        };
-        case OP_PRINT: {
-          print();
-          break;
-        };
-        case OP_HALT: {
-          halt();
-          break;
-        };
-        case OP_JMP: {
-          jmp();
-          break; 
-        };
-        default: {
+      OPCodes opcode = static_cast<OPCodes>(fetch<uint8_t>());
+      auto function_map_it = opcode_handlers.find(opcode);
+      if (function_map_it != opcode_handlers.end()) {
+        // Call the OPCode handler function
+        (this->*function_map_it->second)();
+      }
+      else {
           std::cout << sc_time_stamp() << ": Unknown opcode " << (int)opcode << std::endl;
           halted = true;
-        }
       }
     };
-  }
-
-  public:
-  CPU(sc_module_name name) : sc_module(name) {
-    SC_THREAD(execute);
-    sensitive << in.clock.pos();
   }
 };

@@ -36,16 +36,25 @@ int sc_main(int argc, char* argv[]) {
 
   uint64_t counter = 0;
   // Write mov 0xf0, 2
-  memory.memory_map[counter++] = OP_STORE;
+  memory.memory_map[counter++] = OP_STR;
   memory.memory_map[counter++] = 0xf0;
   memory.memory_map[counter++] = 2;
 
-  // // Write dsp 0x100
-  memory.memory_map[counter++] = OP_PRINT;
+  // Write dsp 0x100
+  memory.memory_map[counter++] = OP_DSP;
   memory.memory_map[counter++] = 0xf0;
 
+  // Write jmp 0xa
+  memory.memory_map[counter++] = OP_JMP;
+  memory.memory_map[counter++] = counter + 0x4;
+
+  // Write nop slide
+  memory.memory_map[counter++] = OP_NOP;
+  memory.memory_map[counter++] = OP_NOP;
+  memory.memory_map[counter++] = OP_NOP;
+
   // Write stp
-  memory.memory_map[counter++] = OP_HALT;
+  memory.memory_map[counter++] = OP_STP;
 
   sc_start(100, SC_MS);
   return 0;
