@@ -5,16 +5,15 @@
 int sc_main(int argc, char* argv[]) {
   sc_clock clock("clock", 1, SC_MS);
 
-  sc_signal<bool> write_flag, ack, req;
-  sc_signal<uint8_t> address;
-  sc_signal<uint8_t> write_data, read_data;
+  sc_signal<bool> write_flag, req;
+  sc_signal<mem_addr_t> address;
+  sc_signal<mem_data_t> write_data, read_data;
 
   CPU cpu("CPU");
   Memory memory("Memory");
 
   cpu.in.clock(clock);
   cpu.in.read_data(read_data);
-  cpu.in.ack(ack);
 
   cpu.out.req(req);
   cpu.out.address(address);
@@ -28,25 +27,27 @@ int sc_main(int argc, char* argv[]) {
   memory.in.req(req);
 
   memory.out.read_data(read_data);
-  memory.out.ack(ack);
 
-  ack.write(false);
   req.write(false);
 
 
   uint64_t counter = 0;
-  // Write mov 0xf0, 2
-  memory.memory_map[counter++] = OP_STR;
-  memory.memory_map[counter++] = 0xf0;
+  // lda #2
+  memory.memory_map[counter++] = OP_LDA_IMM;
   memory.memory_map[counter++] = 2;
 
-  // Write dsp 0x100
-  memory.memory_map[counter++] = OP_DSP;
+  // sta $0xf0
+  memory.memory_map[counter++] = OP_STA_ZPG;
+  memory.memory_map[counter++] = 0xf0;
+
+  // lda $0xf0
+  memory.memory_map[counter++] = OP_LDA_ZPG;
   memory.memory_map[counter++] = 0xf0;
 
   // Write jmp 0xa
-  memory.memory_map[counter++] = OP_JMP;
-  memory.memory_map[counter++] = counter + 0x4;
+  memory.memory_map[counter++] = OP_JMP_ABS;
+  memory.memory_map[counter++] = counter + 0x2;
+  memory.memory_map[counter++] = 0;
 
   // Write nop slide
   memory.memory_map[counter++] = OP_NOP;
@@ -54,7 +55,7 @@ int sc_main(int argc, char* argv[]) {
   memory.memory_map[counter++] = OP_NOP;
 
   // Write stp
-  memory.memory_map[counter++] = OP_STP;
+  memory.memory_map[counter++] = OP_BRK;
 
   sc_start(100, SC_MS);
   return 0;
