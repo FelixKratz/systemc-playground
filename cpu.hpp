@@ -1,4 +1,5 @@
 #include <systemc.h>
+#include "registers.hpp"
 #include "types.hpp"
 
 class CPU;
@@ -46,9 +47,11 @@ class CPU : public sc_module {
     sensitive << in.clock.pos();
   }
 
-  uint64_t cycle_count = 0;
+  uint64_t get_cycle_count() { return cycle_count; }
 
   private:
+  uint64_t cycle_count = 0;
+
   const std::unordered_map<opcode_t, Instruction> opcode_handlers = {
     { OP_BRK,     { "brk", &CPU::brk, AddressingMode::Implied } },
     { OP_JMP_ABS, { "jmp", &CPU::jmp, AddressingMode::Absolute } },
@@ -59,8 +62,7 @@ class CPU : public sc_module {
   };
 
   bool halted = false;
-  mem_addr_t pc = 0;
-  mem_data_t A = 0;
+  Registers registers;
 
   // Just a wrapper around wait to count cpu cycles
   void wait() {
@@ -105,7 +107,7 @@ class CPU : public sc_module {
     // Little-endian byte loading
     mem_data_t buffer[sizeof(T)];
     for (size_t i = 0; i < sizeof(T); i++) {
-      buffer[i] = read_from_memory(pc++);
+      buffer[i] = read_from_memory(registers.pc++);
     }
     T result;
     std::memcpy(&result, buffer, sizeof(T));
@@ -126,28 +128,28 @@ class CPU : public sc_module {
   // Store the accumulator in memory
   void sta(const Instruction& instruction) {
     mem_addr_t destination = resolve_address(instruction);
-    write_to_memory(destination, A);
+    write_to_memory(destination, registers.A);
 
-    std::cout << sc_time_stamp() << ": " << instruction.name << " " << (int)destination << ", " << (int)A << std::endl;
+    std::cout << sc_time_stamp() << ": " << instruction.name << " " << (int)destination << ", " << (int)registers.A << std::endl;
   }
 
   // Print a byte stored in memory
   void lda(const Instruction& instruction) {
     if (instruction.mode == AddressingMode::ZeroPage) {
       mem_addr_t source_address = resolve_address(instruction);
-      A = read_from_memory(source_address);
+      registers.A = read_from_memory(source_address);
 
-      std::cout << sc_time_stamp() << ": " << instruction.name << " "  << (int)source_address << " -> " << (int)A << std::endl;
+      std::cout << sc_time_stamp() << ": " << instruction.name << " "  << (int)source_address << " -> " << (int)registers.A << std::endl;
     } else if (instruction.mode == AddressingMode::Immediate) {
-      A = fetch<mem_data_t>();
-      std::cout << sc_time_stamp() << ": " << instruction.name << " #" << (int)A << std::endl;
+      registers.A = fetch<mem_data_t>();
+      std::cout << sc_time_stamp() << ": " << instruction.name << " #" << (int)registers.A << std::endl;
     }
   }
 
   // Perform a jump of the pc
   void jmp(const Instruction& instruction) {
-    pc = resolve_address(instruction);
-    std::cout << sc_time_stamp() << ": jmp " << (int)pc << std::endl;
+    registers.pc = resolve_address(instruction);
+    std::cout << sc_time_stamp() << ": jmp " << (int)registers.pc << std::endl;
   }
 
   // Halt the CPU
