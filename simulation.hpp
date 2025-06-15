@@ -2,6 +2,8 @@
 #include "memory.hpp"
 #include "cpu.hpp"
 
+constexpr int time_per_cycle = 1000; // Measures in ns -> 1MHz
+
 class Simulation {
   private:
   sc_signal<bool> write_flag, req;
@@ -34,7 +36,11 @@ class Simulation {
   CPU cpu;
   Memory memory;
 
-  Simulation() : clock("clock", 1, SC_MS), cpu("cpu"), memory("memory") {
+  void step(int count) {
+    sc_start(time_per_cycle * count, SC_NS);
+  }
+
+  Simulation() : clock("clock", time_per_cycle, SC_NS), cpu("cpu"), memory("memory") {
     connect();
   }
 };

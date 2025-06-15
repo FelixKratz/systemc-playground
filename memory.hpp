@@ -14,6 +14,7 @@ class Memory : public sc_module {
   } out;
 
   void set_memory(mem_t&& mem) { memory = std::move(mem); }
+  mem_t copy_memory() { return memory; }
 
   Memory(sc_module_name name) : sc_module(name) {
     memory.fill(0);

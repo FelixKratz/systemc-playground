@@ -47,7 +47,9 @@ class CPU : public sc_module {
     sensitive << in.clock.pos();
   }
 
-  uint64_t get_cycle_count() { return cycle_count; }
+  bool is_halted() { return halted; };
+  Registers copy_registers() { return registers; };
+  uint64_t get_cycle_count() { return cycle_count; };
 
   private:
   uint64_t cycle_count = 0;
@@ -168,8 +170,8 @@ class CPU : public sc_module {
 
   // Core loop of the CPU
   void execute() {
+    ::wait();
     while (!halted) {
-      wait();
       uint64_t cycles_start = cycle_count;
       opcode_t opcode = static_cast<OPCodes>(fetch<opcode_t>());
       auto function_map_it = opcode_handlers.find(opcode);

@@ -32,6 +32,6 @@ int sc_main(int argc, char* argv[]) {
 
   simulation.memory.set_memory(std::move(memory));
 
-  sc_start(100, SC_MS);
+  simulation.step(100);
   return 0;
 }
