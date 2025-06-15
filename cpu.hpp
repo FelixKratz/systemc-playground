@@ -51,6 +51,7 @@ class CPU : public sc_module {
   Registers copy_registers() { return registers; };
   uint64_t get_cycle_count() { return cycle_count; };
   void set_logging(bool log) { logging = log; };
+  void set_registers(Registers& reg) { registers = reg; };
 
   private:
   bool halted = false;
