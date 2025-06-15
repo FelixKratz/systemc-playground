@@ -13,7 +13,7 @@ class Memory : public sc_module {
     sc_out<mem_data_t> read_data;
   } out;
 
-  void set_memory(mem_t& mem) { memory = mem; }
+  void set_memory(mem_t&& mem) { memory = std::move(mem); }
 
   Memory(sc_module_name name) : sc_module(name) {
     memory.fill(0);

@@ -4,9 +4,6 @@
 
 class Simulation {
   private:
-  CPU cpu;
-  Memory memory;
-
   sc_signal<bool> write_flag, req;
   sc_signal<mem_addr_t> address;
   sc_signal<mem_data_t> write_data, read_data;
@@ -34,9 +31,8 @@ class Simulation {
   }
 
   public:
-  void set_memory(mem_t& mem) {
-    memory.set_memory(mem);
-  }
+  CPU cpu;
+  Memory memory;
 
   Simulation() : clock("clock", 1, SC_MS), cpu("cpu"), memory("memory") {
     connect();

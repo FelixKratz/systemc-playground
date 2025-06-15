@@ -30,7 +30,7 @@ int sc_main(int argc, char* argv[]) {
   // Write stp
   memory[counter++] = OP_BRK;
 
-  simulation.set_memory(memory);
+  simulation.memory.set_memory(std::move(memory));
 
   sc_start(100, SC_MS);
   return 0;
