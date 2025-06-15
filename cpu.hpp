@@ -50,8 +50,12 @@ class CPU : public sc_module {
   bool is_halted() { return halted; };
   Registers copy_registers() { return registers; };
   uint64_t get_cycle_count() { return cycle_count; };
+  void set_logging(bool log) { logging = log; };
 
   private:
+  bool halted = false;
+  bool logging = false;
+  Registers registers;
   uint64_t cycle_count = 0;
 
   const std::unordered_map<opcode_t, Instruction> opcode_handlers = {
@@ -62,9 +66,6 @@ class CPU : public sc_module {
     { OP_LDA_ZPG, { "lda", &CPU::lda, AddressingMode::ZeroPage } },
     { OP_NOP,     { "nop", &CPU::nop, AddressingMode::Implied } },
   };
-
-  bool halted = false;
-  Registers registers;
 
   // Just a wrapper around wait to count cpu cycles
   void wait() {
@@ -132,7 +133,11 @@ class CPU : public sc_module {
     mem_addr_t destination = resolve_address(instruction);
     write_to_memory(destination, registers.A);
 
-    std::cout << sc_time_stamp() << ": " << instruction.name << " " << (int)destination << ", " << (int)registers.A << std::endl;
+    if (logging) {
+      std::cout << sc_time_stamp() << ": " << instruction.name
+                << " " << (int)destination << ", " << (int)registers.A
+                << std::endl;
+    }
   }
 
   // Print a byte stored in memory
@@ -141,17 +146,28 @@ class CPU : public sc_module {
       mem_addr_t source_address = resolve_address(instruction);
       registers.A = read_from_memory(source_address);
 
-      std::cout << sc_time_stamp() << ": " << instruction.name << " "  << (int)source_address << " -> " << (int)registers.A << std::endl;
+      if (logging) {
+        std::cout << sc_time_stamp() << ": " << instruction.name
+                  << " "  << (int)source_address << " -> "
+                  << (int)registers.A << std::endl;
+      }
     } else if (instruction.mode == AddressingMode::Immediate) {
       registers.A = fetch<mem_data_t>();
-      std::cout << sc_time_stamp() << ": " << instruction.name << " #" << (int)registers.A << std::endl;
+      if (logging) {
+        std::cout << sc_time_stamp() << ": " << instruction.name
+                  << " #" << (int)registers.A << std::endl;
+      }
     }
   }
 
   // Perform a jump of the pc
   void jmp(const Instruction& instruction) {
     registers.pc = resolve_address(instruction);
-    std::cout << sc_time_stamp() << ": jmp " << (int)registers.pc << std::endl;
+
+    if (logging) {
+      std::cout << sc_time_stamp() << ": jmp " << (int)registers.pc
+                << std::endl;
+    }
   }
 
   // Halt the CPU
@@ -159,19 +175,25 @@ class CPU : public sc_module {
     // brk actually takes 7 instructions, which we model later
     for (int i = 0; i < 6; i++) wait();
     halted = true;
-    std::cout << sc_time_stamp() << ": brk" << std::endl;
+
+    if (logging) {
+      std::cout << sc_time_stamp() << ": brk" << std::endl;
+    }
   }
 
   // Do nothing, just wait
   void nop(const Instruction& instruction) {
     wait();
-    std::cout << sc_time_stamp() << ": nop" << std::endl;
+
+    if (logging) {
+      std::cout << sc_time_stamp() << ": nop" << std::endl;
+    }
   }
 
   // Core loop of the CPU
   void execute() {
-    ::wait();
     while (!halted) {
+      wait();
       uint64_t cycles_start = cycle_count;
       opcode_t opcode = static_cast<OPCodes>(fetch<opcode_t>());
       auto function_map_it = opcode_handlers.find(opcode);
@@ -180,7 +202,12 @@ class CPU : public sc_module {
         // Call the OPCode handler function
         (this->*(function_map_it->second.handler))(function_map_it->second);
         uint64_t cycles_end = cycle_count;
-        std::cout << function_map_it->second.name << " took " << cycles_end - cycles_start << " cycles" << std::endl << std::endl;
+
+        if (logging) {
+          std::cout << function_map_it->second.name << " took "
+                    << cycles_end - cycles_start << " cycles"
+                    << std::endl << std::endl;
+        }
       }
       else {
           std::cout << sc_time_stamp() << ": Unknown opcode " << (int)opcode << std::endl;

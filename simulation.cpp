@@ -1,7 +1,7 @@
 #include "simulation.hpp"
 
 int sc_main(int argc, char* argv[]) {
-  Simulation simulation;
+  Simulation simulation(true);
 
   mem_addr_t counter = 0;
   mem_t memory;

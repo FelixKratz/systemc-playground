@@ -40,7 +40,8 @@ class Simulation {
     sc_start(time_per_cycle * count, SC_NS);
   }
 
-  Simulation() : clock("clock", time_per_cycle, SC_NS), cpu("cpu"), memory("memory") {
+  Simulation(bool logging = false) : clock("clock", time_per_cycle, SC_NS), cpu("cpu"), memory("memory") {
     connect();
+    cpu.set_logging(logging);
   }
 };
